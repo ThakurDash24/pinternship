@@ -880,42 +880,66 @@ function renderCSProgress() {
   if (key === "health" && !hpData) loadHealthPoints(); // 👈 ONLY LOAD ON DEMAND
 }
 
-async function viewHpDetail(email) {
-  const url = `${HP_API_URL}?detail=1&email=${encodeURIComponent(email)}`;
-  const res = await fetch(url);
-  const data = await res.json();
+//view details
 
-  let html = `
-    <h3>Health Points Breakdown</h3>
-    <p class="small">${email}</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:12px;">
-      <tr>
-        <th>Date</th>
-        <th>Source</th>
-        <th>%</th>
-        <th>Before</th>
-        <th>After</th>
-      </tr>
-  `;
-
-(data.breakdown || []).forEach(r => {
-  html += `
-    <tr>
-      <td>${r.appliedDate}</td>
-      <td>${r.sourceRef}</td>
-      <td class="num">${r.appliedPercent}%</td>
-      <td class="num">${Number(r.currentHPBefore).toFixed(2)}</td>
-      <td class="num">${Number(r.currentHPAfter).toFixed(2)}</td>
-    </tr>
-  `;
-});
-
-
-  html += "</table>";
-
+  async function viewHpDetail(email) {
+  // ✅ OPEN WINDOW IMMEDIATELY (user action)
   const w = window.open("", "_blank", "width=720,height=600");
-  w.document.write(`<html><body style="font-family:Segoe UI;padding:20px;">${html}</body></html>`);
+  if (!w) {
+    alert("Popup blocked. Please allow popups for this site.");
+    return;
+  }
+
+  w.document.write(`
+    <html>
+      <body style="font-family:Segoe UI;padding:20px;">
+        <p>Loading details for ${email}…</p>
+      </body>
+    </html>
+  `);
+
+  try {
+    const url = `${HP_API_URL}?detail=1&email=${encodeURIComponent(email)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    let html = `
+      <h3>Health Points Breakdown</h3>
+      <p class="small">${email}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+        <tr>
+          <th>Date</th>
+          <th>Source</th>
+          <th>%</th>
+          <th>Before</th>
+          <th>After</th>
+        </tr>
+    `;
+
+    (data.breakdown || []).forEach(r => {
+      html += `
+        <tr>
+          <td>${r.appliedDate ?? "-"}</td>
+          <td>${r.sourceRef ?? "-"}</td>
+          <td class="num">${r.appliedPercent ?? "-"}%</td>
+          <td class="num">${Number(r.currentHPBefore ?? 0).toFixed(2)}</td>
+          <td class="num">${Number(r.currentHPAfter ?? 0).toFixed(2)}</td>
+        </tr>
+      `;
+    });
+
+    html += "</table>";
+
+    w.document.body.innerHTML = html;
+  } catch (err) {
+    w.document.body.innerHTML = `
+      <h3>Error loading details</h3>
+      <pre>${err.message}</pre>
+    `;
+    console.error(err);
+  }
 }
+
   function activateInner(key) {
     // left menu active state
     document.querySelectorAll("#tab-leaderboard .menu-item").forEach(m => m.classList.remove("active"));
